@@ -1,0 +1,1 @@
+This project aims to build a Youtube-like backend to handle video streaming, authentication etc.

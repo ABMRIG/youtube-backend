@@ -23,4 +23,11 @@ app.use(express.static("public"));
 
 // cookieParser inside a server is to handle and manage cookies in incoming HTTP requests easily. It enables the server to read, parse, and access cookie data sent by the client, allowing functionalities like user authentication, session management, personalization, and tracking.
 app.use(cookieParser());
+
+// routing for /api/v1/users
+import userRouter from "./routes/user.routes.js";
+
+app.use("/api/v1/users", userRouter)    
+//userRouter is "router" of user.routes.js
+
 export {app};

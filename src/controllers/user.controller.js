@@ -20,8 +20,8 @@ const registerUser = asyncHandler( async (req, res) => {
 
     //handling response that are coming in the Body
     const {fullname, email, username, password} = req.body;
-    console.log("fullname: ",fullname);
-    console.log("Email: ",email);
+    // console.log("fullname: ",fullname);
+    // console.log("Email: ",email);
 
     if ([fullname, email, username, password].some((field) => {
         field?.trim === ""
@@ -30,14 +30,14 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // "User" is from user.model
-    const existedUser = User.findOne(
+    const existedUser = await User.findOne(
         {
             // if we find either username or email in DB then throw error
             // "$or" checks for the above
             $or: [{ username }, { email }]
         }
     )
-
+    // console.log("existedUSer: ", existedUser);
     if (existedUser){
         throw new ApiError(409, "User with this email or username already exists in DB");
     }
@@ -49,8 +49,13 @@ const registerUser = asyncHandler( async (req, res) => {
     // we get ".files" property from multer since data is coming from user.routes.js which contains multer
 
     // ".avatar[0]" gives us the path of avatar file in storage
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    const avatarLocalPath = req.files?.avatar[0]?.path
+    
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage ? req.files.coverImage[0].path : null
+
+    
+    // console.log("avatarLocalPath: ", avatarLocalPath)
 
     if (!avatarLocalPath){
         throw new ApiError(400, "Avatar file is required");
@@ -58,6 +63,8 @@ const registerUser = asyncHandler( async (req, res) => {
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
     const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+    // console.log("Avatar: ", avatar);
 
     if (!avatar){
         throw new ApiError(400, "Avatar file is required");

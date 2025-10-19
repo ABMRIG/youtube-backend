@@ -2,12 +2,13 @@ import multer from "multer";
 
 // since we can get only file like json in "req parameter" and not some actual files like .mp4, .jpg etc we use the "file parameter" of multer to handle such files
 
-// "cb parameter" is short-hand for Call-Back Functions
+// "cb" parameter is short-hand for Call-Back Functions
 
 const storage = multer.diskStorage(
     {
         destination: function(req, file, cb) {
-            cb(null, "./public/temp") //this is temp storage for files
+            cb(null, "./public/temp")// <--- This sets the destination folder on your local filesystem
+            //this is temp storage for files
         },
         // filename: function (req, file, cb) {
         //     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9)
@@ -16,7 +17,7 @@ const storage = multer.diskStorage(
 
         // We should have added suffix using the above commented code to avoid two files with same name getting uploaded at the same time and cause confusion for the server
         filename: function (req, file, cb) {
-            cb(null, file.originalname)
+            cb(null, file.originalname) // <--- This sets the filename to save as (you could customize it)
         }
     }
 )
@@ -24,4 +25,4 @@ const storage = multer.diskStorage(
 // export const upload = multer({storage : storage})
 
 // From ES6 if the property name and variable name are same we can only write it once as seen below
-export const upload = multer({storage});
+export const upload = multer({ storage }); // multer({storage}) saves the file to localStorage

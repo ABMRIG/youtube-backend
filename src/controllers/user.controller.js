@@ -4,6 +4,25 @@ import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+// function to generate Refresh and Access tokens
+
+const generateAccessAndRefreshTokens = async (userId) => {
+    try{
+        const user = await User.findById(userId);
+        const accessToken = user.genarateAccessToken();
+        const refreshToken = user.genarateRefreshToken();
+
+        user.refreshToken = refreshToken;
+        // although we have provided the token we still need to save/push the changes in the DB so we do the following:
+        await user.save({validateBeforeSave: false});
+        // validateBeforeSave is needed bcs it prevents the requirement of passing fields like password, email, username etc here which are required field.
+        return { accessToken, refreshToken };
+
+    }
+    catch(error){
+        throw new ApiError(500, "Something went wrong while generating Access and Refresh Tokens");
+    }
+}
 
 const registerUser = asyncHandler( async (req, res) => {
     // get user details from front-end
@@ -81,8 +100,8 @@ const registerUser = asyncHandler( async (req, res) => {
             username: username.toLowerCase()
         }
     )
-
-    // we will find the created user on the DB but we won't bring the Password and Refresh Token from the DB while checking if the user is created
+    
+    // we will find the created user on the DB but we won't bring the Password and Refresh Token from the DB while checking if the user is created so we write the select statement according to that
 
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken");
@@ -94,7 +113,104 @@ const registerUser = asyncHandler( async (req, res) => {
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User Registered Successfully",)
     )
+})
+
+// Login user
+const loginUser = asyncHandler(async (req, res) => {
+    // req body -> data
+    // get username or email from user
+    // find the user
+    // password check
+    // access and refresh token checked
+    // send cookie
+
+
+    //object destructuring:
+    const { email, username, password } = req.body;
+
+    if (!email && !username){
+        throw new ApiError(404, "username or email is required");
+    }
+
+    const user = await User.findOne(
+        {
+            $or: [{username}, {email}]
+        }
+    )
+
+    if (!user){
+        throw new ApiError(404, "User does not exist");
+    }
+
+    //from "User" we get properties of Mongoose and using "user" we get properties from "user.model.js" i.e. the matched user
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if (!isPasswordValid){
+        throw new ApiError(401, "Invalid user credentials");
+    }
+
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id); // we get this user._id from "const user"
+
+    // we need to fetch "user" again bcs the current "const user" doesn't have the refreshToken field but the DB has already been updated to have that field. So when we fetch "user" again we get the latest user details that contains refreshToken field
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken") //we didn't bring password and refreshToken so that we don't send these to the frontend/(to the user)
+
+    // We could have updated the old user obj by adding the refreshToken field to avoid contacting the DB
+
+
+    // options is a setting of our cookies so that they are viewable but not modifiable by the user/client
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user: loggedInUser, accessToken,
+                refreshToken
+            },
+            "User logged in Successfully"
+        )
+    )
+})
+
+const logoutUser = asyncHandler(async (req, res) => {
+    // we need to remove cookies of user
+    // we need to remove refreshTokwn of user from DB
+
+
+    // in "loginUser" we were able to identify user bcs we took email/username, password from the user so we got "user._id" but in the case of logoutUser we don't get that from user bcs we can't use a logout form to logout the user else if we give form then user can logout other users too 
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {   
+            // using "$set" we set the refreshToken as undefined which indicates user is logged out 
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        // the { new: true } option for findByIdAndUpdate() tells the query to return the modified document rather than the original otherwise mongodb would return the old document
+        {
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }  
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"))
 
 })
 
-export {registerUser};
+export { registerUser, loginUser, logoutUser };

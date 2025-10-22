@@ -92,13 +92,15 @@ userSchema.methods.genarateAccessToken = function () {
 }
 
 userSchema.methods.genarateRefreshToken = function () {
+    // "jwt.sign" is the process to make signature (a tampered signature indicates a compromised token)
     return jwt.sign(
         {
-            _id: this.id,
+            _id: this.id,   // this is the payload
+
         },
-        process.env.REFRESH_TOKEN_SECRET,
+        process.env.REFRESH_TOKEN_SECRET, //this is secret to validate token
         {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY // optional settings of token
         }
     )
 }

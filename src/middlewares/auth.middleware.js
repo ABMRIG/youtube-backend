@@ -15,7 +15,7 @@ export const verifyJWT = asyncHandler(async (req, resizeBy, next) => {
             throw new ApiError(401, "Unauthorized request");
         }
     
-    // in "user.model.js" we inserted fields like _id, email etc using jwt.sign and so we can extract them using jwt.verify
+    // in "user.model.js" we used fields like _id, email etc and signed them using "jwt.sign" and so we can now extract them after verifying the signature and expiry time using "jwt.verify"
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
     
         const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
